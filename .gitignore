@@ -1,0 +1,8 @@
+*.pyc
+*~
+__pycache__
+venv/
+mapdb.db
+/media
+.DS_Store
+.idea/

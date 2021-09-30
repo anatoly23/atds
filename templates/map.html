@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Quick Start - Leaflet</title>
+
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico"/>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+          integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+          crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+            integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+            crossorigin=""></script>
+    <style>
+        #mapid {
+            height: 90vh;
+        }
+    </style>
+    <script type="text/javascript">
+
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+
+            var mymap = L.map('mapid').setView([54.912420, 37.414590], 14);
+
+            L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+                maxZoom: 18,
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
+                    'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+                id: 'mapbox/streets-v11',
+                tileSize: 512,
+                zoomOffset: -1
+            }).addTo(mymap);
+
+
+            function setMarker(lat, long, radcil, radkon) {
+                // let lat = document.getElementById('lat').value;
+                // let long = document.getElementById('long').value;
+                // let radcil = document.getElementById('radcil').value;
+                // let radkon = document.getElementById('radkon').value;
+                // let heightkon = document.getElementById('heightkon').value;
+
+                let marker = L.circle([lat, long], {opacity: 0.7}).addTo(mymap);
+                marker.setRadius(radcil);
+                let markerouter = L.circle([lat, long], {opacity: 0.5}).addTo(mymap);
+                markerouter.setRadius(radkon)
+            }
+
+
+            let btn = document.querySelector('button');
+            btn.addEventListener('click', async function (event) {
+                event.preventDefault();
+                let lat = document.getElementById('lat').value;
+                let long = document.getElementById('long').value;
+                let radcil = document.getElementById('radcil').value;
+                let radkon = document.getElementById('radkon').value;
+                let heightkon = document.getElementById('heightkon').value;
+
+                // let marker = L.circle([lat, long], {opacity: 0.7}).addTo(mymap);
+                // marker.setRadius(radcil);
+                // let markerouter = L.circle([lat, long], {opacity: 0.5}).addTo(mymap);
+                // markerouter.setRadius(radkon)
+
+                setMarker(lat, long, radcil, radkon)
+
+
+                let dict = {
+                    lat: lat,
+                    long: long,
+                    radcil: radcil,
+                    radkon: radkon,
+                    heightkon: heightkon
+                }
+                let json = JSON.stringify(dict);
+
+                let response = await fetch("/calc", {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: json
+                });
+                let response_text = await response.json();
+                console.log('response is: ', response_text);
+            });
+
+            let loadbtn = document.querySelector('#load');
+            loadbtn.addEventListener('click', async function (event) {
+                event.preventDefault();
+                let response = await fetch("/items");
+                if (response.ok) {
+                    let json = await response.json();
+                    console.log('response is: ', json);
+                    json.forEach(obj => {
+                        Object.entries(obj).forEach(([key, value]) => {
+                            setMarker(obj.lat, obj.long, obj.radcil, obj.radkon)
+                        });
+
+
+                    });
+
+                } else {
+                    alert("Ошибка HTTP: " + response.status);
+                }
+
+
+            });
+
+
+        })
+    </script>
+
+</head>
+<body>
+<div id="mapid"></div>
+<div>
+    <label for="lat">Широта: </label>
+    <input type="text" id="lat">
+    <label for="long">Долгота: </label>
+    <input type="text" id="long">
+
+    <label for="radcil">Радиус цилиндра: </label>
+    <input type="text" id="radcil">
+    <label for="radkon">Радиус конуса: </label>
+    <input type="text" id="radkon">
+    <label for="heightkon">Высота конуса: </label>
+    <input type="text" id="heightkon">
+    <button type="button" onclick="setMarker()">Установить</button>
+    <button id="load" type="button">Загрузить значения</button>
+</div>
+
+<!--<script>-->
+
+
+<!--    //  function onMapClick(e) {-->
+<!--    //-->
+<!--    //        var marker = L.circle(e.latlng, {opacity: 0.7}).addTo(mymap);-->
+<!--    //        marker.setRadius(innerradius);-->
+<!--    //       var markerouter = L.circle(e.latlng, {opacity: 0.5}).addTo(mymap);-->
+<!--    //      markerouter.setRadius(outerradius)-->
+<!--    //  }-->
+
+
+<!--    //mymap.on('click', onMapClick);-->
+
+<!--</script>-->
+
+
+</body>
+</html>
