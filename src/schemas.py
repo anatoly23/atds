@@ -8,6 +8,26 @@ class AuthDetails(BaseModel):
     role: Optional[str] = None
 
 
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: str = None
+
+
+class User(BaseModel):
+    username: str
+    email: str = None
+    full_name: str = None
+    disabled: bool = None
+
+
+class UserInDB(User):
+    hashed_password: str
+
+
 class Item(BaseModel):
     lat: str
     long: str
