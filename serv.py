@@ -7,27 +7,18 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from sqlalchemy.orm import Session
-from src.schemas import AuthDetails, User, Item
-from src.auth import get_current_active_user, get_password_hash, authenticate_user, users_db, create_access_token
-from src import models, crud
+from src.schemas import Item, User, UserInDB, Point, Status
+from src.auth import get_current_active_user, get_password_hash, authenticate_user, create_access_token
+# optimize import
+from src import crud
+import src.database
+from src.checkoverlap import if_overlap
 
 import uvicorn
 
-from src.database import SessionLocal, engine
-
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-models.Base.metadata.create_all(bind=engine)
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
+src.database.create_db()
 
 templates = Jinja2Templates(directory="templates")
 
@@ -40,8 +31,8 @@ async def index_page(request: Request):
 
 
 @app.post('/login', response_class=HTMLResponse)
-async def login(response: Response, username: str = Form(...), password: str = Form(...)):
-    user = authenticate_user(users_db, username, password)
+async def login(username: str = Form(...), password: str = Form(...)):
+    user = authenticate_user(username, password)
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect email or password")
 
@@ -51,8 +42,7 @@ async def login(response: Response, username: str = Form(...), password: str = F
     )
 
     token = jsonable_encoder(access_token)
-
-    # response = RedirectResponse(url="/map")
+    response: Response = RedirectResponse('/map', status_code=303)
     response.set_cookie(
         "Authorization",
         value=f"Bearer {token}",
@@ -60,8 +50,7 @@ async def login(response: Response, username: str = Form(...), password: str = F
         max_age=1800,
         expires=1800,
     )
-
-    return f'<p><a href="/map">Перейти на карту</a></p>'
+    return response
 
 
 @app.get("/logout")
@@ -73,14 +62,17 @@ async def route_logout_and_remove_cookie():
 
 @app.post('/register', status_code=201, response_class=HTMLResponse)
 def register(username: str = Form(...), password: str = Form(...), role: str = Form(...)):
-    data = {"username": username, "password": password, "role": role}
-    auth_details = AuthDetails(**data)
-    # if any(x['username'] == auth_details.username for x in users):
-    if username in users_db:
+    data = {"username": username, "password": password, "role": role, "disabled": False}
+    auth_details = User(**data)
+    user_in_bd = crud.get_user(username)
+    if user_in_bd:
         raise HTTPException(status_code=400, detail='Username is taken')
     hashed_password = get_password_hash(auth_details.password)
-    users_db[auth_details.username] = {'username': auth_details.username, 'hashed_password': hashed_password}
-    return f'<p><a href="/">На главную</a></p>'
+    userdata = {"username": username, "hashed_password": hashed_password, "role": role,
+                "disabled": auth_details.disabled}
+    user = UserInDB(**userdata)
+    crud.create_user(user)
+    return RedirectResponse(url="/", status_code=303)
 
 
 @app.get('/map', response_class=HTMLResponse)
@@ -88,21 +80,32 @@ def get_map(request: Request, current_user: User = Depends(get_current_active_us
     return templates.TemplateResponse("map.html", context={"request": request})
 
 
-# @app.post("/calc", response_model=Item)
-# async def calc(item: Item, db: Session = Depends(get_db)):
-#     return crud.create_item(db=db, item=item)
+@app.post("/set", response_model=Item)
+async def calc(item: Item, current_user: User = Depends(get_current_active_user)):
+    return crud.create_item(item=item)
 
 
 @app.get("/items", response_model=List[Item])
-def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db),
-               current_user: User = Depends(get_current_active_user)):
-    return crud.get_items(db, skip=skip, limit=limit)
+def read_items(skip: int = 0, limit: int = 100, current_user: User = Depends(get_current_active_user)):
+    return crud.get_items(skip=skip, limit=limit)
 
 
-@app.get('/protected', response_class=HTMLResponse)
-def protected(current_user: User = Depends(get_current_active_user)):
-    print(current_user)
-    return f'Прувет!!!!'
+@app.post("/setpoint", response_model=Status)
+def set_point(point: Point, skip: int = 0, limit: int = 100, current_user: User = Depends(get_current_active_user)):
+    radio_objects = crud.get_items(skip=skip, limit=limit)
+    for object in radio_objects:
+        if if_overlap(float(point.latpoint), float(point.longpoint), float(point.heightpoint), float(object.lat),
+                      float(object.long), float(object.radkon), float(object.anglecon), float(object.heightkon)):
+            return {"status": False}
+
+    crud.create_point(point=point, user_id=current_user.id)
+    return {"status": True}
+
+
+@app.get("/getpoint", response_model=List[Point])
+def get_point(current_user: User = Depends(get_current_active_user)):
+    points = crud.get_points(user_id=current_user.id)
+    return points
 
 
 if __name__ == "__main__":

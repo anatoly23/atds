@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import jwt
 from jwt import PyJWTError
 
-from src.schemas import TokenData, User, UserInDB
+from src.schemas import TokenData, User
 
 from fastapi import Depends, HTTPException
 
@@ -18,13 +18,14 @@ from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
 from starlette.status import HTTP_403_FORBIDDEN
 from starlette.requests import Request
 
+from src import crud
+
 # to get a string like this run:
 # openssl rand -hex 32
 # to do: use .env here
 
 ALGORITHM = "HS256"
 SECRET_KEY = os.getenv('SECRET_KEY')
-users_db = {}
 
 
 class OAuth2PasswordBearerCookie(OAuth2):
@@ -87,14 +88,18 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-def get_user(db, username: str):
-    if username in db:
-        user_dict = db[username]
-        return UserInDB(**user_dict)
+def get_user(username: str):
+    user_in_bd = crud.get_user(username)
+    # if username in db:
+    if user_in_bd:
+        if user_in_bd.username == username:
+            # user_dict = db[username]
+            # return UserInDB(**user_dict)
+            return user_in_bd
 
 
-def authenticate_user(fake_db, username: str, password: str):
-    user = get_user(fake_db, username)
+def authenticate_user(username: str, password: str):
+    user = get_user(username)
     if not user:
         return False
     if not verify_password(password, user.hashed_password):
@@ -125,13 +130,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         token_data = TokenData(username=username)
     except PyJWTError:
         raise credentials_exception
-    user = get_user(users_db, username=token_data.username)
+    user = get_user(username=token_data.username)
     if user is None:
         raise credentials_exception
     return user
 
 
 async def get_current_active_user(current_user: User = Depends(get_current_user)):
-    if current_user.disabled:
+    if current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user

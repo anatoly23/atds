@@ -1,11 +1,14 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 
-class AuthDetails(BaseModel):
-    username: str
-    password: str
-    role: Optional[str] = None
+class Point(BaseModel):
+    latpoint: str
+    longpoint: str
+    heightpoint: str
+
+    class Config:
+        orm_mode = True
 
 
 class Token(BaseModel):
@@ -19,9 +22,13 @@ class TokenData(BaseModel):
 
 class User(BaseModel):
     username: str
-    email: str = None
-    full_name: str = None
-    disabled: bool = None
+    password: Optional[str] = None
+    role: Optional[str] = None
+    disabled: Optional[bool] = None
+    points: List[Point] = []
+
+    class Config:
+        orm_mode = True
 
 
 class UserInDB(User):
@@ -34,6 +41,11 @@ class Item(BaseModel):
     radcil: str
     radkon: str
     heightkon: str
+    anglecon: str
 
     class Config:
         orm_mode = True
+
+
+class Status(BaseModel):
+    status: bool

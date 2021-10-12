@@ -7,7 +7,7 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico"/>
+<!--    <link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico"/>-->
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
           integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
@@ -23,10 +23,9 @@
     <script type="text/javascript">
 
 
-        document.addEventListener("DOMContentLoaded", function () {
+        async function ready() {
 
-
-            var mymap = L.map('mapid').setView([54.912420, 37.414590], 14);
+            var mymap = L.map('mapid').setView([54.912420, 37.414590], 13);
 
             L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
                 maxZoom: 18,
@@ -37,13 +36,7 @@
                 zoomOffset: -1
             }).addTo(mymap);
 
-
             function setMarker(lat, long, radcil, radkon) {
-                // let lat = document.getElementById('lat').value;
-                // let long = document.getElementById('long').value;
-                // let radcil = document.getElementById('radcil').value;
-                // let radkon = document.getElementById('radkon').value;
-                // let heightkon = document.getElementById('heightkon').value;
 
                 let marker = L.circle([lat, long], {opacity: 0.7}).addTo(mymap);
                 marker.setRadius(radcil);
@@ -51,8 +44,69 @@
                 markerouter.setRadius(radkon)
             }
 
+            function setPoint(latpoint, longpoint) {
+                var marker = L.marker([latpoint, longpoint]).addTo(mymap);
+            }
 
-            let btn = document.querySelector('button');
+            let response = await fetch("/items");
+            if (response.ok) {
+                let json = await response.json();
+                console.log('response is: ', json);
+                json.forEach(obj => {
+                    Object.entries(obj).forEach(([key, value]) => {
+                        setMarker(obj.lat, obj.long, obj.radcil, obj.radkon)
+                    });
+                });
+
+            } else {
+                alert("Ошибка HTTP: " + response.status);
+            }
+
+            let responsepoints = await fetch("/getpoint");
+            if (response.ok) {
+                let json = await responsepoints.json();
+                console.log('response is: ', json);
+                json.forEach(obj => {
+                    Object.entries(obj).forEach(([key, value]) => {
+                        setPoint(obj.latpoint, obj.longpoint)
+                    });
+                });
+            } else {
+                alert("Ошибка HTTP: " + responsepoints.status);
+            }
+
+            let btnpoint = document.querySelector('#setpoint');
+            btnpoint.addEventListener('click', async function (event) {
+                event.preventDefault();
+                let latpoint = document.getElementById('latpoint').value;
+                let longpoint = document.getElementById('longpoint').value;
+                let heightpoint = document.getElementById('heightpoint').value;
+                let dict = {
+                    latpoint: latpoint,
+                    longpoint: longpoint,
+                    heightpoint: heightpoint
+                }
+                let json = JSON.stringify(dict);
+
+                let response = await fetch("/setpoint", {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: json
+                });
+
+                let response_set = await response.json()
+                console.log('response is: ', response_set);
+                if (response_set.status == true) {
+                    setPoint(latpoint, longpoint)
+                } else if (response_set.status == false) {
+                    alert("Вы не можете тут строить!");
+                }
+            })
+
+
+            let btn = document.querySelector('#setmarker');
             btn.addEventListener('click', async function (event) {
                 event.preventDefault();
                 let lat = document.getElementById('lat').value;
@@ -60,25 +114,22 @@
                 let radcil = document.getElementById('radcil').value;
                 let radkon = document.getElementById('radkon').value;
                 let heightkon = document.getElementById('heightkon').value;
+                let anglecon = document.getElementById('anglecon').value;
 
-                // let marker = L.circle([lat, long], {opacity: 0.7}).addTo(mymap);
-                // marker.setRadius(radcil);
-                // let markerouter = L.circle([lat, long], {opacity: 0.5}).addTo(mymap);
-                // markerouter.setRadius(radkon)
 
                 setMarker(lat, long, radcil, radkon)
-
 
                 let dict = {
                     lat: lat,
                     long: long,
                     radcil: radcil,
                     radkon: radkon,
-                    heightkon: heightkon
+                    heightkon: heightkon,
+                    anglecon: anglecon
                 }
                 let json = JSON.stringify(dict);
 
-                let response = await fetch("/calc", {
+                let response = await fetch("/set", {
                     method: "POST",
                     headers: {
                         'Content-Type': 'application/json'
@@ -89,28 +140,9 @@
                 console.log('response is: ', response_text);
             });
 
-            let loadbtn = document.querySelector('#load');
-            loadbtn.addEventListener('click', async function (event) {
-                event.preventDefault();
-                let response = await fetch("/items");
-                if (response.ok) {
-                    let json = await response.json();
-                    console.log('response is: ', json);
-                    json.forEach(obj => {
-                        Object.entries(obj).forEach(([key, value]) => {
-                            setMarker(obj.lat, obj.long, obj.radcil, obj.radkon)
-                        });
-                    });
+        }
 
-                } else {
-                    alert("Ошибка HTTP: " + response.status);
-                }
-
-
-            });
-
-
-        })
+        document.addEventListener("DOMContentLoaded", ready)
     </script>
 
 </head>
@@ -128,25 +160,19 @@
     <input type="text" id="radkon">
     <label for="heightkon">Высота конуса: </label>
     <input type="text" id="heightkon">
-    <button type="button" onclick="setMarker()">Установить</button>
-    <button id="load" type="button">Загрузить значения</button>
+    <label for="anglecon">Угол конуса: </label>
+    <input type="text" id="anglecon">
+    <button type="button" id="setmarker">Установить</button>
 </div>
-
-<!--<script>-->
-
-
-<!--    //  function onMapClick(e) {-->
-<!--    //-->
-<!--    //        var marker = L.circle(e.latlng, {opacity: 0.7}).addTo(mymap);-->
-<!--    //        marker.setRadius(innerradius);-->
-<!--    //       var markerouter = L.circle(e.latlng, {opacity: 0.5}).addTo(mymap);-->
-<!--    //      markerouter.setRadius(outerradius)-->
-<!--    //  }-->
-
-
-<!--    //mymap.on('click', onMapClick);-->
-
-<!--</script>-->
+<div>
+    <label for="latpoint">Широта точки: </label>
+    <input type="text" id="latpoint">
+    <label for="longpoint">Долгота точки: </label>
+    <input type="text" id="longpoint">
+    <label for="heightpoint">Высота точки: </label>
+    <input type="text" id="heightpoint">
+    <button type="button" id="setpoint">Установить</button>
+</div>
 
 
 </body>
