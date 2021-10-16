@@ -90,11 +90,8 @@ def get_password_hash(password):
 
 def get_user(username: str):
     user_in_bd = crud.get_user(username)
-    # if username in db:
     if user_in_bd:
         if user_in_bd.username == username:
-            # user_dict = db[username]
-            # return UserInDB(**user_dict)
             return user_in_bd
 
 

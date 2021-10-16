@@ -12,7 +12,6 @@ from src.auth import get_current_active_user, get_password_hash, authenticate_us
 # optimize import
 from src import crud
 import src.database
-from src.checkoverlap import if_overlap
 
 import uvicorn
 
@@ -110,8 +109,8 @@ def read_items(skip: int = 0, limit: int = 100, current_user: User = Depends(get
 def set_point(point: Point, skip: int = 0, limit: int = 100, current_user: User = Depends(get_current_active_user)):
     radio_objects = crud.get_items(skip=skip, limit=limit)
     for object in radio_objects:
-        if if_overlap(float(point.latpoint), float(point.longpoint), float(point.heightpoint), float(object.lat),
-                      float(object.long), float(object.radkon), float(object.anglecon), float(object.heightkon)):
+        if Item.if_overlap(float(point.latpoint), float(point.longpoint), float(point.heightpoint), float(object.lat),
+                           float(object.long), float(object.radkon), float(object.anglecon), float(object.heightkon)):
             return {"status": False}
 
     crud.create_point(point=point, user_id=current_user.id)
