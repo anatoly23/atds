@@ -41,7 +41,7 @@ def get_points(user_id: int):
 
 def create_user(user: schemas.UserInDB):
     db = Session()
-    db_user = models.User(username=user.username, hashed_password=user.hashed_password, role=user.role, is_active=False)
+    db_user = models.User(username=user.username, hashed_password=user.hashed_password, role=user.role, is_active=True)
     db.add(db_user)
     db.commit()
     db.close()

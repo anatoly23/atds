@@ -148,6 +148,6 @@ async def get_current_user(security_scopes: SecurityScopes, token: str = Depends
 
 
 async def get_current_active_user(current_user: User = Security(get_current_user, scopes=[])):
-    if current_user.is_active:
+    if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
