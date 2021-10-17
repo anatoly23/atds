@@ -3,15 +3,16 @@ import settings
 from typing import Optional
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
+from pydantic import ValidationError
 
 import jwt
 from jwt import PyJWTError
 
 from src.schemas import TokenData, User
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Security, status
 
-from fastapi.security import OAuth2
+from fastapi.security import OAuth2, SecurityScopes
 from fastapi.security.utils import get_authorization_scheme_param
 from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
 
@@ -19,10 +20,6 @@ from starlette.status import HTTP_403_FORBIDDEN
 from starlette.requests import Request
 
 from src import crud
-
-# to get a string like this run:
-# openssl rand -hex 32
-# to do: use .env here
 
 ALGORITHM = "HS256"
 SECRET_KEY = os.getenv('SECRET_KEY')
@@ -77,7 +74,10 @@ class OAuth2PasswordBearerCookie(OAuth2):
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-oauth2_scheme = OAuth2PasswordBearerCookie(tokenUrl="/token")
+oauth2_scheme = OAuth2PasswordBearerCookie(
+    tokenUrl="/token",
+    scopes={"builder": "Set antennas", "operator": "Set pipes"},
+)
 
 
 def verify_password(plain_password, hashed_password):
@@ -115,25 +115,39 @@ def create_access_token(*, data: dict, expires_delta: timedelta = None):
     return encoded_jwt
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(security_scopes: SecurityScopes, token: str = Depends(oauth2_scheme)):
+    if security_scopes.scopes:
+        authenticate_value = f'Bearer scope="{security_scopes.scope_str}"'
+    else:
+        authenticate_value = f"Bearer"
     credentials_exception = HTTPException(
-        status_code=HTTP_403_FORBIDDEN, detail="Could not validate credentials"
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": authenticate_value},
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-        token_data = TokenData(username=username)
-    except PyJWTError:
+        token_scopes = payload.get("scopes", [])
+        token_data = TokenData(scopes=token_scopes, username=username)
+    except (PyJWTError, ValidationError):
         raise credentials_exception
     user = get_user(username=token_data.username)
     if user is None:
         raise credentials_exception
+    for scope in security_scopes.scopes:
+        if scope not in token_data.scopes:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not enough permissions",
+                headers={"WWW-Authenticate": authenticate_value},
+            )
     return user
 
 
-async def get_current_active_user(current_user: User = Depends(get_current_user)):
+async def get_current_active_user(current_user: User = Security(get_current_user, scopes=[])):
     if current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user

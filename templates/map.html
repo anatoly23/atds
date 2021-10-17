@@ -7,7 +7,7 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!--    <link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico"/>-->
+    <!--    <link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico"/>-->
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
           integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
@@ -45,7 +45,7 @@
             }
 
             function setPoint(latpoint, longpoint) {
-                var marker = L.marker([latpoint, longpoint]).addTo(mymap);
+                let marker = L.marker([latpoint, longpoint]).addTo(mymap);
             }
 
             let response = await fetch("/items");
@@ -59,11 +59,11 @@
                 });
 
             } else {
-                alert("Ошибка HTTP: " + response.status);
+                // alert("Ошибка HTTP: " + response.status);
             }
 
             let responsepoints = await fetch("/getpoint");
-            if (response.ok) {
+            if (responsepoints.ok) {
                 let json = await responsepoints.json();
                 console.log('response is: ', json);
                 json.forEach(obj => {
@@ -72,7 +72,7 @@
                     });
                 });
             } else {
-                alert("Ошибка HTTP: " + responsepoints.status);
+                // alert("Ошибка HTTP: " + responsepoints.status);
             }
 
             let btnpoint = document.querySelector('#setpoint');
@@ -148,7 +148,11 @@
 </head>
 <body>
 <div id="mapid"></div>
+
+
 <div>
+    {% if role == 'builder' %}
+    <div>
     <label for="lat">Широта: </label>
     <input type="text" id="lat">
     <label for="long">Долгота: </label>
@@ -164,16 +168,19 @@
     <input type="text" id="anglecon">
     <button type="button" id="setmarker">Установить</button>
 </div>
-<div>
-    <label for="latpoint">Широта точки: </label>
+    {% elif role == 'operator' %}
+    <div>
+    <label for="latpoint">Широта трубы: </label>
     <input type="text" id="latpoint">
-    <label for="longpoint">Долгота точки: </label>
+    <label for="longpoint">Долгота трубы: </label>
     <input type="text" id="longpoint">
-    <label for="heightpoint">Высота точки: </label>
+    <label for="heightpoint">Высота трубы: </label>
     <input type="text" id="heightpoint">
     <button type="button" id="setpoint">Установить</button>
 </div>
-
-
+    {% else %}
+    <p> </p>
+    {% endif %}
+</div>
 </body>
 </html>

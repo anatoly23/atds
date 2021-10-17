@@ -1,7 +1,7 @@
 from typing import List
 from datetime import timedelta
 
-from fastapi import Depends, FastAPI, HTTPException, Form, Response, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Form, Response, Request, Security, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from src.schemas import Item, User, UserInDB, Point, Status, Token
 from src.auth import get_current_active_user, get_password_hash, authenticate_user, create_access_token
-# optimize import
+
 from src import crud
 import src.database
 
@@ -37,7 +37,7 @@ async def login(username: str = Form(...), password: str = Form(...)):
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": username}, expires_delta=access_token_expires
+        data={"sub": user.username, "scopes": [user.role]}, expires_delta=access_token_expires
     )
 
     token = jsonable_encoder(access_token)
@@ -85,28 +85,30 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+        data={"sub": user.username, "scopes": form_data.scopes}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
 
 @app.get('/map', response_class=HTMLResponse)
 def get_map(request: Request, current_user: User = Depends(get_current_active_user)):
-    return templates.TemplateResponse("map.html", context={"request": request})
+    return templates.TemplateResponse("map.html", context={"request": request, "role": current_user.role})
 
 
 @app.post("/set", response_model=Item)
-async def calc(item: Item, current_user: User = Depends(get_current_active_user)):
+async def calc(item: Item, current_user: User = Security(get_current_active_user, scopes=["builder"])):
     return crud.create_item(item=item)
 
 
 @app.get("/items", response_model=List[Item])
-def read_items(skip: int = 0, limit: int = 100, current_user: User = Depends(get_current_active_user)):
+def read_items(skip: int = 0, limit: int = 100,
+               current_user: User = Security(get_current_active_user, scopes=["builder"])):
     return crud.get_items(skip=skip, limit=limit)
 
 
 @app.post("/setpoint", response_model=Status)
-def set_point(point: Point, skip: int = 0, limit: int = 100, current_user: User = Depends(get_current_active_user)):
+def set_point(point: Point, skip: int = 0, limit: int = 100,
+              current_user: User = Security(get_current_active_user, scopes=["operator"])):
     radio_objects = crud.get_items(skip=skip, limit=limit)
     for object in radio_objects:
         if Item.if_overlap(float(point.latpoint), float(point.longpoint), float(point.heightpoint), float(object.lat),
@@ -118,7 +120,7 @@ def set_point(point: Point, skip: int = 0, limit: int = 100, current_user: User 
 
 
 @app.get("/getpoint", response_model=List[Point])
-def get_point(current_user: User = Depends(get_current_active_user)):
+def get_point(current_user: User = Security(get_current_active_user, scopes=["operator"])):
     points = crud.get_points(user_id=current_user.id)
     return points
 

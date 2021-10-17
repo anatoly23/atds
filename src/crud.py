@@ -1,8 +1,6 @@
 from sqlalchemy.orm import Session
-
-from . import models, schemas
-
-from .database import Session
+from src import models, schemas
+from src.database import Session
 
 
 def create_item(item: schemas.Item):
@@ -25,7 +23,8 @@ def get_items(skip: int = 0, limit: int = 100):
 
 def create_point(point: schemas.Point, user_id: int):
     db = Session()
-    db_point = models.Point(latpoint=point.latpoint, longpoint=point.longpoint, heightpoint=point.heightpoint, user_id=user_id)
+    db_point = models.Point(latpoint=point.latpoint, longpoint=point.longpoint, heightpoint=point.heightpoint,
+                            user_id=user_id)
     db.add(db_point)
     db.commit()
     db.refresh(db_point)
@@ -42,7 +41,6 @@ def get_points(user_id: int):
 
 def create_user(user: schemas.UserInDB):
     db = Session()
-    # Add some salt
     db_user = models.User(username=user.username, hashed_password=user.hashed_password, role=user.role, is_active=False)
     db.add(db_user)
     db.commit()
