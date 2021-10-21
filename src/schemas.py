@@ -5,7 +5,7 @@ from math import tan, radians
 from geographiclib.geodesic import Geodesic
 
 
-class Point(BaseModel):
+class Pipe(BaseModel):
     latpoint: str
     longpoint: str
     heightpoint: str
@@ -29,7 +29,7 @@ class User(BaseModel):
     password: Optional[str] = None
     role: Optional[str] = None
     disabled: Optional[bool] = None
-    points: List[Point] = []
+    points: List[Pipe] = []
 
     class Config:
         orm_mode = True
@@ -39,7 +39,7 @@ class UserInDB(User):
     hashed_password: str
 
 
-class Item(BaseModel):
+class Antenna(BaseModel):
     lat: str
     long: str
     radcil: str
@@ -47,7 +47,7 @@ class Item(BaseModel):
     heightkon: str
     anglecon: str
 
-    @staticmethod
+    # @staticmethod
     def if_overlap(point_lat: float, point_long: float, point_height: float, lat: float, long: float, radkon: float,
                    angelcon: float, heightkon: float) -> bool:
         geod = Geodesic.WGS84

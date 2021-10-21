@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from src.schemas import Item, User, UserInDB, Point, Status, Token
+from src.schemas import Antenna, User, UserInDB, Pipe, Status, Token
 from src.auth import get_current_active_user, get_password_hash, authenticate_user, create_access_token
 
 from src import crud
@@ -95,33 +95,33 @@ def get_map(request: Request, current_user: User = Depends(get_current_active_us
     return templates.TemplateResponse("map.html", context={"request": request, "role": current_user.role})
 
 
-@app.post("/set", response_model=Item)
-async def calc(item: Item, current_user: User = Security(get_current_active_user, scopes=["builder"])):
-    return crud.create_item(item=item)
+@app.post("/setantena", response_model=Antenna)
+async def calc(item: Antenna, current_user: User = Security(get_current_active_user, scopes=["builder"])):
+    return crud.create_antena(antena=item)
 
 
-@app.get("/items", response_model=List[Item])
+@app.get("/getantena", response_model=List[Antenna])
 def read_items(skip: int = 0, limit: int = 100,
                current_user: User = Security(get_current_active_user, scopes=["builder"])):
-    return crud.get_items(skip=skip, limit=limit)
+    return crud.get_antena(skip=skip, limit=limit)
 
 
-@app.post("/setpoint", response_model=Status)
-def set_point(point: Point, skip: int = 0, limit: int = 100,
+@app.post("/setpipe", response_model=Status)
+def set_point(point: Pipe, skip: int = 0, limit: int = 100,
               current_user: User = Security(get_current_active_user, scopes=["operator"])):
-    radio_objects = crud.get_items(skip=skip, limit=limit)
+    radio_objects = crud.get_antena(skip=skip, limit=limit)
     for object in radio_objects:
-        if Item.if_overlap(float(point.latpoint), float(point.longpoint), float(point.heightpoint), float(object.lat),
-                           float(object.long), float(object.radkon), float(object.anglecon), float(object.heightkon)):
+        if Antenna.if_overlap(float(point.latpoint), float(point.longpoint), float(point.heightpoint), float(object.lat),
+                              float(object.long), float(object.radkon), float(object.anglecon), float(object.heightkon)):
             return {"status": False}
 
-    crud.create_point(point=point, user_id=current_user.id)
+    crud.create_pipe(pipe=point, user_id=current_user.id)
     return {"status": True}
 
 
-@app.get("/getpoint", response_model=List[Point])
+@app.get("/getpipe", response_model=List[Pipe])
 def get_point(current_user: User = Security(get_current_active_user, scopes=["operator"])):
-    points = crud.get_points(user_id=current_user.id)
+    points = crud.get_pipe(user_id=current_user.id)
     return points
 
 

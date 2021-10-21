@@ -3,10 +3,10 @@ from src import models, schemas
 from src.database import Session
 
 
-def create_item(item: schemas.Item):
+def create_antena(antena: schemas.Antenna):
     db = Session()
-    db_item = models.Item(lat=item.lat, long=item.long, radcil=item.radcil, radkon=item.radkon,
-                          heightkon=item.heightkon, anglecon=item.anglecon)
+    db_item = models.Antenna(lat=antena.lat, long=antena.long, radcil=antena.radcil, radkon=antena.radkon,
+                             heightkon=antena.heightkon, anglecon=antena.anglecon)
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
@@ -14,17 +14,17 @@ def create_item(item: schemas.Item):
     return db_item
 
 
-def get_items(skip: int = 0, limit: int = 100):
+def get_antena(skip: int = 0, limit: int = 100):
     db = Session()
-    items = db.query(models.Item).offset(skip).limit(limit).all()
+    items = db.query(models.Antenna).offset(skip).limit(limit).all()
     db.close()
     return items
 
 
-def create_point(point: schemas.Point, user_id: int):
+def create_pipe(pipe: schemas.Pipe, user_id: int):
     db = Session()
-    db_point = models.Point(latpoint=point.latpoint, longpoint=point.longpoint, heightpoint=point.heightpoint,
-                            user_id=user_id)
+    db_point = models.Pipe(latpoint=pipe.latpoint, longpoint=pipe.longpoint, heightpoint=pipe.heightpoint,
+                           user_id=user_id)
     db.add(db_point)
     db.commit()
     db.refresh(db_point)
@@ -32,9 +32,9 @@ def create_point(point: schemas.Point, user_id: int):
     return db_point
 
 
-def get_points(user_id: int):
+def get_pipe(user_id: int):
     db = Session()
-    points = db.query(models.Point).filter(models.Point.user_id == user_id).all()
+    points = db.query(models.Pipe).filter(models.Pipe.user_id == user_id).all()
     db.close()
     return points
 

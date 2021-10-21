@@ -48,7 +48,7 @@
                 let marker = L.marker([latpoint, longpoint]).addTo(mymap);
             }
 
-            let response = await fetch("/items");
+            let response = await fetch("/getantena");
             if (response.ok) {
                 let json = await response.json();
                 console.log('response is: ', json);
@@ -62,7 +62,7 @@
                 // alert("Ошибка HTTP: " + response.status);
             }
 
-            let responsepoints = await fetch("/getpoint");
+            let responsepoints = await fetch("/getpipe");
             if (responsepoints.ok) {
                 let json = await responsepoints.json();
                 console.log('response is: ', json);
@@ -76,70 +76,73 @@
             }
 
             let btnpoint = document.querySelector('#setpoint');
-            btnpoint.addEventListener('click', async function (event) {
-                event.preventDefault();
-                let latpoint = document.getElementById('latpoint').value;
-                let longpoint = document.getElementById('longpoint').value;
-                let heightpoint = document.getElementById('heightpoint').value;
-                let dict = {
-                    latpoint: latpoint,
-                    longpoint: longpoint,
-                    heightpoint: heightpoint
-                }
-                let json = JSON.stringify(dict);
+            if (typeof(btnpoint) != 'undefined' && btnpoint != null) {
+                btnpoint.addEventListener('click', async function (event) {
+                    event.preventDefault();
+                    let latpoint = document.getElementById('latpoint').value;
+                    let longpoint = document.getElementById('longpoint').value;
+                    let heightpoint = document.getElementById('heightpoint').value;
+                    let dict = {
+                        latpoint: latpoint,
+                        longpoint: longpoint,
+                        heightpoint: heightpoint
+                    }
+                    let json = JSON.stringify(dict);
 
-                let response = await fetch("/setpoint", {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: json
-                });
+                    let response = await fetch("/setpipe", {
+                        method: "POST",
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: json
+                    })
 
-                let response_set = await response.json()
-                console.log('response is: ', response_set);
-                if (response_set.status == true) {
-                    setPoint(latpoint, longpoint)
-                } else if (response_set.status == false) {
-                    alert("Вы не можете тут строить!");
-                }
-            })
+                    let response_set = await response.json()
+                    console.log('response is: ', response_set);
+                    if (response_set.status == true) {
+                        setPoint(latpoint, longpoint)
+                    } else if (response_set.status == false) {
+                        alert("Вы не можете тут строить!");
+                    }
+                })
+            }
 
 
             let btn = document.querySelector('#setmarker');
-            btn.addEventListener('click', async function (event) {
-                event.preventDefault();
-                let lat = document.getElementById('lat').value;
-                let long = document.getElementById('long').value;
-                let radcil = document.getElementById('radcil').value;
-                let radkon = document.getElementById('radkon').value;
-                let heightkon = document.getElementById('heightkon').value;
-                let anglecon = document.getElementById('anglecon').value;
+            if (typeof(btn) != 'undefined' && btn != null) {
+                btn.addEventListener('click', async function (event) {
+                    event.preventDefault();
+                    let lat = document.getElementById('lat').value;
+                    let long = document.getElementById('long').value;
+                    let radcil = document.getElementById('radcil').value;
+                    let radkon = document.getElementById('radkon').value;
+                    let heightkon = document.getElementById('heightkon').value;
+                    let anglecon = document.getElementById('anglecon').value;
 
 
-                setMarker(lat, long, radcil, radkon)
+                    setMarker(lat, long, radcil, radkon)
 
-                let dict = {
-                    lat: lat,
-                    long: long,
-                    radcil: radcil,
-                    radkon: radkon,
-                    heightkon: heightkon,
-                    anglecon: anglecon
-                }
-                let json = JSON.stringify(dict);
+                    let dict = {
+                        lat: lat,
+                        long: long,
+                        radcil: radcil,
+                        radkon: radkon,
+                        heightkon: heightkon,
+                        anglecon: anglecon
+                    }
+                    let json = JSON.stringify(dict);
 
-                let response = await fetch("/set", {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: json
-                });
-                let response_text = await response.json();
-                console.log('response is: ', response_text);
-            });
-
+                    let response = await fetch("/setantena", {
+                        method: "POST",
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: json
+                    })
+                    let response_text = await response.json();
+                    console.log('response is: ', response_text);
+                })
+            }
         }
 
         document.addEventListener("DOMContentLoaded", ready)
@@ -154,28 +157,28 @@
     {% if role == 'builder' %}
     <div>
     <label for="lat">Широта: </label>
-    <input type="text" id="lat">
+    <input type="text" id="lat" value="54.909728">
     <label for="long">Долгота: </label>
-    <input type="text" id="long">
+    <input type="text" id="long" value="37.390842">
 
     <label for="radcil">Радиус цилиндра: </label>
-    <input type="text" id="radcil">
+    <input type="text" id="radcil" value="200">
     <label for="radkon">Радиус конуса: </label>
-    <input type="text" id="radkon">
+    <input type="text" id="radkon" value="3000">
     <label for="heightkon">Высота конуса: </label>
-    <input type="text" id="heightkon">
+    <input type="text" id="heightkon" value="700">
     <label for="anglecon">Угол конуса: </label>
-    <input type="text" id="anglecon">
+    <input type="text" id="anglecon" value="7">
     <button type="button" id="setmarker">Установить</button>
 </div>
     {% elif role == 'operator' %}
     <div>
     <label for="latpoint">Широта трубы: </label>
-    <input type="text" id="latpoint">
+    <input type="text" id="latpoint" value="54.901815">
     <label for="longpoint">Долгота трубы: </label>
-    <input type="text" id="longpoint">
+    <input type="text" id="longpoint" value="37.396507">
     <label for="heightpoint">Высота трубы: </label>
-    <input type="text" id="heightpoint">
+    <input type="text" id="heightpoint" value="750">
     <button type="button" id="setpoint">Установить</button>
 </div>
     {% else %}
