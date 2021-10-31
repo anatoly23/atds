@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+
 from src import models, schemas
 from src.database import Session
 
@@ -14,7 +15,7 @@ def create_antena(antena: schemas.Antenna):
     return db_item
 
 
-def get_antena(skip: int = 0, limit: int = 100):
+def get_antena(skip: int = 0, limit: int = 100) -> schemas.Antenna:
     db = Session()
     items = db.query(models.Antenna).offset(skip).limit(limit).all()
     db.close()
@@ -41,7 +42,7 @@ def get_pipe(user_id: int):
 
 def create_user(user: schemas.UserInDB):
     db = Session()
-    db_user = models.User(username=user.username, hashed_password=user.hashed_password, role=user.role, is_active=True)
+    db_user = models.User(username=user.username, hashed_password=user.hashed_password, role=user.role, disabled=False)
     db.add(db_user)
     db.commit()
     db.close()

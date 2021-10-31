@@ -1,14 +1,12 @@
-from pydantic import BaseModel
 from typing import Optional, List
 
-from math import tan, radians
-from geographiclib.geodesic import Geodesic
+from pydantic import BaseModel
 
 
 class Pipe(BaseModel):
-    latpoint: str
-    longpoint: str
-    heightpoint: str
+    latpoint: float
+    longpoint: float
+    heightpoint: float
 
     class Config:
         orm_mode = True
@@ -25,6 +23,7 @@ class TokenData(BaseModel):
 
 
 class User(BaseModel):
+    id: Optional[int]
     username: str
     password: Optional[str] = None
     role: Optional[str] = None
@@ -40,24 +39,12 @@ class UserInDB(User):
 
 
 class Antenna(BaseModel):
-    lat: str
-    long: str
-    radcil: str
-    radkon: str
-    heightkon: str
-    anglecon: str
-
-    # @staticmethod
-    def if_overlap(point_lat: float, point_long: float, point_height: float, lat: float, long: float, radkon: float,
-                   angelcon: float, heightkon: float) -> bool:
-        geod = Geodesic.WGS84
-        distance = geod.Inverse(point_lat, point_long, lat, long)
-        if distance['s12'] < radkon:
-            katet = tan(radians(angelcon)) * distance['s12']
-            if katet + heightkon >= point_height:
-                return False
-            return True
-        return False
+    lat: float
+    long: float
+    radcil: float
+    radkon: float
+    heightkon: float
+    anglecon: float
 
     class Config:
         orm_mode = True

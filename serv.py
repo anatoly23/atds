@@ -1,19 +1,17 @@
-from typing import List
 from datetime import timedelta
-
-from fastapi import Depends, FastAPI, HTTPException, Form, Response, Request, Security, status
-from fastapi.encoders import jsonable_encoder
-from fastapi.security import OAuth2PasswordRequestForm
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, RedirectResponse
-
-from src.schemas import Antenna, User, UserInDB, Pipe, Status, Token
-from src.auth import get_current_active_user, get_password_hash, authenticate_user, create_access_token
-
-from src import crud
-import src.database
+from typing import List
 
 import uvicorn
+from fastapi import Depends, FastAPI, HTTPException, Form, Response, Request, Security, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.templating import Jinja2Templates
+
+import src.database
+from src import crud
+from src.auth import get_current_active_user, get_password_hash, authenticate_user, create_access_token
+from src.schemas import Antenna, User, UserInDB, Pipe, Status, Token
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -36,8 +34,13 @@ async def login(username: str = Form(...), password: str = Form(...)):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    scopes = []
+    if user.role == "operator":
+        scopes = ['setantena', 'getantena']
+    elif user.role == 'builder':
+        scopes = ['setpipe', 'getpipe', 'getantena']
     access_token = create_access_token(
-        data={"sub": user.username, "scopes": [user.role]}, expires_delta=access_token_expires
+        data={"sub": user.username, "scopes": scopes}, expires_delta=access_token_expires
     )
 
     token = jsonable_encoder(access_token)
@@ -96,31 +99,30 @@ def get_map(request: Request, current_user: User = Depends(get_current_active_us
 
 
 @app.post("/setantena", response_model=Antenna)
-async def calc(item: Antenna, current_user: User = Security(get_current_active_user, scopes=["builder"])):
-    return crud.create_antena(antena=item)
+async def set_antena(antena: Antenna, current_user: User = Security(get_current_active_user, scopes=["setantena"])):
+    return crud.create_antena(antena=antena)
 
 
 @app.get("/getantena", response_model=List[Antenna])
-def read_items(skip: int = 0, limit: int = 100,
-               current_user: User = Security(get_current_active_user, scopes=["builder"])):
+def get_antena(skip: int = 0, limit: int = 100,
+               current_user: User = Security(get_current_active_user, scopes=["getantena"])):
     return crud.get_antena(skip=skip, limit=limit)
 
 
 @app.post("/setpipe", response_model=Status)
-def set_point(point: Pipe, skip: int = 0, limit: int = 100,
-              current_user: User = Security(get_current_active_user, scopes=["operator"])):
-    radio_objects = crud.get_antena(skip=skip, limit=limit)
-    for object in radio_objects:
-        if Antenna.if_overlap(float(point.latpoint), float(point.longpoint), float(point.heightpoint), float(object.lat),
-                              float(object.long), float(object.radkon), float(object.anglecon), float(object.heightkon)):
+def set_pipe(pipe: Pipe, skip: int = 0, limit: int = 100,
+             current_user: User = Security(get_current_active_user, scopes=["setpipe"])):
+    antenas = crud.get_antena(skip=skip, limit=limit)
+    for antena in antenas:
+        if antena.if_overlap(pipe.latpoint, pipe.longpoint, pipe.heightpoint):
             return {"status": False}
 
-    crud.create_pipe(pipe=point, user_id=current_user.id)
+    crud.create_pipe(pipe=pipe, user_id=current_user.id)
     return {"status": True}
 
 
 @app.get("/getpipe", response_model=List[Pipe])
-def get_point(current_user: User = Security(get_current_active_user, scopes=["operator"])):
+def get_pipe(current_user: User = Security(get_current_active_user, scopes=["getpipe"])):
     points = crud.get_pipe(user_id=current_user.id)
     return points
 

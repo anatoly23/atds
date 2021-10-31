@@ -1,25 +1,22 @@
 import os
-import settings
-from typing import Optional
-from passlib.context import CryptContext
 from datetime import datetime, timedelta
-from pydantic import ValidationError
+from typing import Optional
 
 import jwt
-from jwt import PyJWTError
-
-from src.schemas import TokenData, User
-
 from fastapi import Depends, HTTPException, Security, status
-
+from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
 from fastapi.security import OAuth2, SecurityScopes
 from fastapi.security.utils import get_authorization_scheme_param
-from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
-
-from starlette.status import HTTP_403_FORBIDDEN
+from jwt import PyJWTError
+from passlib.context import CryptContext
+from pydantic import ValidationError
 from starlette.requests import Request
+from starlette.status import HTTP_403_FORBIDDEN
 
 from src import crud
+from src.schemas import TokenData, User
+
+import settings
 
 ALGORITHM = "HS256"
 SECRET_KEY = os.getenv('SECRET_KEY')
@@ -76,7 +73,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearerCookie(
     tokenUrl="/token",
-    scopes={"builder": "Set antennas", "operator": "Set pipes"},
+    scopes={"setpipe": "Set pipes", "setantena": "Set antennas", "getantena": "Get antena", "getpipe": "Get pipes"},
 )
 
 
@@ -148,6 +145,6 @@ async def get_current_user(security_scopes: SecurityScopes, token: str = Depends
 
 
 async def get_current_active_user(current_user: User = Security(get_current_user, scopes=[])):
-    if not current_user.is_active:
+    if current_user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user

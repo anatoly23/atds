@@ -154,7 +154,7 @@
 
 
 <div>
-    {% if role == 'builder' %}
+    {% if role == 'operator' %}
     <div>
     <label for="lat">Широта: </label>
     <input type="text" id="lat" value="54.909728">
@@ -171,7 +171,7 @@
     <input type="text" id="anglecon" value="7">
     <button type="button" id="setmarker">Установить</button>
 </div>
-    {% elif role == 'operator' %}
+    {% elif role == 'builder' %}
     <div>
     <label for="latpoint">Широта трубы: </label>
     <input type="text" id="latpoint" value="54.901815">
